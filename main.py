@@ -164,7 +164,7 @@ async def add_quote_function(ctx: SlashContext, quote: str, author: str):
     new_quote = {
         "num": len(json_obj)+1,
         "quote": quote,
-        "author": author.lower()
+        "author": author.title()
     }
     json_obj.append(new_quote)
     with open('./files/quotes.json', 'w') as f_write:
