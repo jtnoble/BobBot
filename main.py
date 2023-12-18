@@ -7,24 +7,37 @@ import os, random, json, datetime
 
 
 bot = Client(intents=Intents.DEFAULT)
+scheduler_running = False  # For if the program reconnects without restarting, no duplicate schedules.
 
 # ON READY, Print when ready
 @listen()
 async def on_ready():
     print("Ready")
     print(f"This bot is owned by {bot.owner}")
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(morning_quote, trigger='cron', hour=10, minute=0)
-    scheduler.add_job(backup_quotes, trigger='cron', hour=10, minute=1)
-    scheduler.add_job(check_birthday, trigger='cron', hour=0, minute=0, second=5)
-    scheduler.start()
 
     print('Sending Message to testing chat')
     channel_id = os.getenv("DEFAULT_DEBUG_CHANNEL")
-    await bot.get_channel(channel_id).send(f'''
+
+    global scheduler_running
+
+    if not scheduler_running:
+        scheduler = AsyncIOScheduler()
+        scheduler.add_job(morning_quote, trigger='cron', hour=10, minute=0)
+        scheduler.add_job(backup_quotes, trigger='cron', hour=10, minute=1)
+        scheduler.add_job(check_birthday, trigger='cron', hour=0, minute=0, second=5)
+        scheduler.start()
+        print("Scheduler Started!")
+        await bot.get_channel(channel_id).send(f'''
                         Time (CDT): {datetime.datetime.now()}
                         BobBot successfully connected to the channel!
                         ''')
+        scheduler_running = True
+    else:
+        await bot.get_channel(channel_id).send(f'''
+                        Time (CDT): {datetime.datetime.now()}
+                        BobBot reconnected to the channel!
+                        ''')
+
     print('Successfully connected!')
     print('    Time of login: ' + str(datetime.datetime.now()))
 
@@ -40,7 +53,7 @@ async def morning_quote():
     num = item['num']
     quote = item['quote']
     author = item['author']
-    response = f'{num}: "{quote}" -{author}'
+    response = f'Time for the quote of the day: \n{num}: "{quote}" -{author}'
     await bot.get_channel(channel_id).send(response)
 
 # BACKUP QUOTE: Backup quotes every morning
