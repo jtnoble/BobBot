@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import matplotlib.pyplot as plt
 import pandas as pd
-import os, random, json, datetime
+import os, random, json, datetime, string
 
 
 bot = Client(intents=Intents.DEFAULT)
@@ -152,8 +152,17 @@ def quote_by_value(value, json_obj=None):
             if item['num'] == phraseNum:
                 return item
     phraseStr = value
+    # First pass
     for item in json_obj:
         if phraseStr in item['quote']:
+            return item
+    # Second pass - Not found, maybe because punctuation
+    phraseStr_lower_no_punc = value.lower()
+    phraseStr_lower_no_punc = phraseStr_lower_no_punc.translate(str.maketrans('', '', string.punctuation))
+    for item in json_obj:
+        temp_item = item['quote'].lower()
+        temp_item = temp_item.translate(str.maketrans('', '', string.punctuation))
+        if phraseStr_lower_no_punc in temp_item:
             return item
     return None
 
