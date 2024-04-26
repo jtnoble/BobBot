@@ -48,17 +48,6 @@ The Magic 8 Ball knows all!
 - Posts a button to roll the magic 8 ball.
 - Stats: 50% Yes, 25% No, 25% Try Again.
 
-##### Polls
-
-Ask a general question to your users!
-
-- Setup a poll for people to answer a question.
-  - This one is kind of confusing to setup...
-- Post a question in the question parameter.
-- Post answers in the choices parameter. These must be separated by COMMAS. Looking for a way to do it with multiple components.
-  - EXAMPLE: /poll **question:** Best Fruit? **choices** Apple,Banana,Passion Fruit,Mango,Pear
-    - _Note, spaces are still allowed, it's just commas that separate_
-
 ##### "Hey"
 
 Annoyingly @ your friend.
@@ -67,11 +56,11 @@ Annoyingly @ your friend.
 - `hey.json` is setup as such:
 - {"users": [{"Name":[{"id": "discord_user_id_as_string" },{ "image": "link_to_image.gif" }]},{"Name2": [{"id": "discord_user_id_as_string" },{ "image": "link_to_image.png" }]},]}
 
-##### "Gamenight"
+##### "Gamenight" [Temporarily Removed]
 
 Ask the group if they're coming to game night.
 
-- This is more specific to my personal use, as my personal discord group does a board game night in person every week. That being said, this is a good skeleton for someone who wants to make a "yes" or "no" poll.
+- _This feature has been temporarily removed, and will be replaced by utilizing Discord's newer polls when the API is public for it._
 
 ##### joel
 
