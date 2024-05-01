@@ -3,8 +3,9 @@ from dotenv import load_dotenv
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import matplotlib.pyplot as plt
 import pandas as pd
-import os, random, json, datetime, string
+import os, random, json, datetime, string, logging
 
+DEBUG = True
 
 bot = Client(intents=Intents.DEFAULT)
 scheduler_running = False  # For if the program reconnects without restarting, no duplicate schedules.
@@ -12,39 +13,43 @@ scheduler_running = False  # For if the program reconnects without restarting, n
 # ON READY, Print when ready
 @listen()
 async def on_ready():
-    print("Ready")
-    print(f"This bot is owned by {bot.owner}")
+    logger.info("Ready")
+    logger.info(f"This bot is owned by {bot.owner}")
 
-    print('Sending Message to testing chat')
+    logger.info('Sending Message to testing chat')
     channel_id = os.getenv("DEFAULT_DEBUG_CHANNEL")
 
     global scheduler_running
 
+    print(f"Connected to channel at {datetime.datetime.now()}")
     if not scheduler_running:
         scheduler = AsyncIOScheduler()
         scheduler.add_job(morning_quote, trigger='cron', hour=10, minute=0)
         scheduler.add_job(backup_quotes, trigger='cron', hour=10, minute=1)
         scheduler.add_job(check_birthday, trigger='cron', hour=0, minute=0, second=5)
         scheduler.start()
-        print("Scheduler Started!")
+        logger.info("Scheduler Started!")
         await bot.get_channel(channel_id).send(f'''
                         Time (CDT): {datetime.datetime.now()}
                         BobBot successfully connected to the channel!
                         ''')
         scheduler_running = True
     else:
+        logger.warning("BobBot reconnected to the channel!")
         await bot.get_channel(channel_id).send(f'''
                         Time (CDT): {datetime.datetime.now()}
                         BobBot reconnected to the channel!
                         ''')
 
-    print('Successfully connected!')
-    print('    Time of login: ' + str(datetime.datetime.now()))
+    logger.info('Successfully connected!')
 
-# ON CREATE, Send message when a message is received
-@listen()
-async def on_message_create(event):
-    print(event.message.content)
+    if DEBUG:
+        await bot.synchronise_interactions(delete_commands=True)
+
+# ON CREATE, Send message when a message is received (currently disabled, not needed)
+# @listen()
+# async def on_message_create(event):
+#     print(event.message.content)
 
 # MORNING QUOTE: Handle the morning quote
 async def morning_quote():
@@ -53,7 +58,11 @@ async def morning_quote():
     num = item['num']
     quote = item['quote']
     author = item['author']
-    response = f'Time for the quote of the day: \n{num}: "{quote}" -{author}'
+    context = item['context']
+    if context:
+        response = f'Time for the quote of the day: \n{num}: "{quote}" -{author}\n*[Context: {context}]*'
+    else:
+        response = f'Time for the quote of the day: \n{num}: "{quote}" -{author}'
     await bot.get_channel(channel_id).send(response)
 
 # BACKUP QUOTE: Backup quotes every morning
@@ -63,7 +72,7 @@ async def backup_quotes():
         json_obj = json.loads(f_read.read())
     with open(f'./files/backup/quotes_{date}.json', 'w') as f_write:
         f_write.write(json.dumps(json_obj))
-    print(f"Backing up quotes for {date}")
+    logger.info(f"Backing up quotes for {date}")
 
 # CHECK BIRTHDAYS: Check to see if it is someone's birthday
 async def check_birthday():
@@ -114,12 +123,17 @@ async def quote_function(ctx: SlashContext, value=None, author=None):
     else:
         item = get_random_quote()
 
-    print(item)
     if item:
         num = item['num']
         quote = item['quote']
         author = item['author']
-        response = f'{num}: "{quote}" -{author}'
+        context = item['context']
+
+        if context:
+            response = f'{num}: "{quote}" -{author}\n*[Context: {context}]*'
+        else:
+            response = f'{num}: "{quote}" -{author}'
+        logger.info(f'{ctx.author} asked for quote {num}')
         return await ctx.send(content=response)
     return await ctx.send(content="No quote found!")
 
@@ -168,30 +182,47 @@ def quote_by_value(value, json_obj=None):
 
 # ADD QUOTE: Add a quote to the quote text file
 @slash_command(name="add_quote", description="Add a quote to our quotes list.")
-@slash_option(
-    name="quote",
-    description="Quote to be added. No quotations.",
-    required=True,
-    opt_type=OptionType.STRING
-)
-@slash_option(
-    name="author",
-    description="Author for the quote to be added",
-    required=True,
-    opt_type=OptionType.STRING
-)
-async def add_quote_function(ctx: SlashContext, quote: str, author: str):
+async def add_quote_modal(ctx: SlashContext):
+    quote_modal = Modal(
+        ShortText(label="Author", custom_id="added_author"),
+        ParagraphText(label="Quote", custom_id="added_quote"),
+        ParagraphText(label="Context", custom_id="added_context", required=False),
+        title="Add A Quote",
+        custom_id="quote_modal",
+    )
+    await ctx.send_modal(modal=quote_modal)
+    modal_ctx: ModalContext = await ctx.bot.wait_for_modal(quote_modal)
+
+    # extract the answers from the responses dictionary
+    author_text = modal_ctx.responses["added_author"]
+    quote_text = modal_ctx.responses["added_quote"]
+    context_text = modal_ctx.responses["added_context"]
+
+    if context_text:
+        msg = f"Added Quote: \n{quote_text} -{author_text}\nContext: {context_text}"
+    else:
+        msg = f"Added Quote: \n{quote_text} -{author_text}"
+
+    try:
+        add_quote_function(quote_text, author_text, context_text)
+        await modal_ctx.send(msg, ephemeral=False)
+        logger.info(f'{ctx.author} added the following quote: {quote_text} -{author_text}')
+    except:
+        await modal_ctx.send("There was an error adding your quote...", ephemeral=True)
+        logger.error("Quote add failure")
+
+def add_quote_function(quote: str, author: str, context: str = None):
     with open('./files/quotes.json', 'r') as f_read:
         json_obj = json.loads(f_read.read())
     new_quote = {
         "num": len(json_obj)+1,
         "quote": quote,
-        "author": author.title()
+        "author": author.title(),
+        "context": context if context else ""
     }
     json_obj.append(new_quote)
     with open('./files/quotes.json', 'w') as f_write:
         f_write.write(json.dumps(json_obj))
-    await ctx.send("Quote added!")
 
 # DELETE QUOTE: Delete a quote from the quote text file
 @slash_command(name="delete_quote", description="Delete a quote from our quotes list.")
@@ -325,6 +356,12 @@ async def hey_function(ctx: SlashContext, friend: User):
                         return await(ctx.send("There was an issue...", ephemeral=True))
     return await ctx.send("User not found D:", ephemeral=True)
 
-# Start bot
-load_dotenv()
-bot.start(os.getenv("DISCORD_TOKEN"))
+if __name__ == '__main__':
+    logging.basicConfig(filename="./files/bob_logs",
+                    filemode='a',
+                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                    datefmt='%H:%M:%S',
+                    level=logging.INFO)
+    logger = logging.getLogger('BobBot')
+    load_dotenv()
+    bot.start(os.getenv("DISCORD_TOKEN"))
