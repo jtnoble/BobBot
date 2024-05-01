@@ -9,7 +9,7 @@ def textfile_to_json(filename) -> None:
     for line in lines:
         count += 1
         quote, author = line.rsplit(" -", 1)
-        data.append({"num": count, "author": author, "quote": quote})
+        data.append({"num": count, "author": author, "quote": quote, "context": ""})
     
     with open(f'{filename}.json', 'w', encoding='utf-8') as jsonfile:
         json.dump(data, jsonfile, indent=4)
