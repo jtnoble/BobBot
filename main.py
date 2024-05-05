@@ -3,12 +3,13 @@ from dotenv import load_dotenv
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import matplotlib.pyplot as plt
 import pandas as pd
-import os, random, json, datetime, string, logging
+import os, random, json, datetime, string, logging, requests, time, asyncio
 
 DEBUG = True
 
 bot = Client(intents=Intents.DEFAULT)
 scheduler_running = False  # For if the program reconnects without restarting, no duplicate schedules.
+rate_limited = False # For if we're in a rate limit specifically with HTTP Requests
 
 # ON READY, Print when ready
 @listen()
@@ -355,6 +356,73 @@ async def hey_function(ctx: SlashContext, friend: User):
                     except:
                         return await(ctx.send("There was an issue...", ephemeral=True))
     return await ctx.send("User not found D:", ephemeral=True)
+
+# GAMENIGHT: A poll specifically created for monday gamenight!
+@slash_command(name="monday_gamenight", description="Create a poll for Monday Game Night")
+async def monday_gamenight_function(ctx: SlashContext):
+    url = f"https://discord.com/api/v10/channels/{ctx.channel_id}/messages"
+    headers = {
+        "Authorization": "Bot " + os.getenv("DISCORD_TOKEN"),
+        "content-type": "application/json"
+    }
+    data = {
+        "poll": {  
+            "question": {"text": "Are you coming to Monday Gamenight?"},
+            "answers": [
+                {
+                    "answer_id": 1,
+                    "poll_media": {
+                        "text": "Yes",
+                        "emoji": None
+                    }
+                },
+                {
+                    "answer_id": 2,
+                    "poll_media": {
+                        "text": "No",
+                        "emoji": None
+                    }
+                },
+            ],
+            "duration": 48,
+            "allow_multiselect": False,
+            "layout_type": 1
+        },
+    }
+
+    match await send_request_with_rate_limit(url=url, headers=headers, data=data):
+        case 0:
+            return await ctx.send(content="Poll created!", ephemeral=True)
+        case -1:
+            return await ctx.send(content="Rate limit exceeded... Try again later.", ephemeral=True)
+        case -2:
+            return await ctx.send(content="An unexpected error occurred. Please reach out to the owner of BobBot", ephemeral=True)
+
+async def send_request_with_rate_limit(url, headers, data) -> int:
+    global rate_limited
+    if rate_limited:
+        return -1
+    
+    response = requests.post(url=url, headers=headers, json=data)
+    
+    # Check if request was successful
+    if response.status_code in [200, 201]:
+        return 0
+    
+    # Handle rate limit response
+    if response.status_code == 429:  # HTTP 429 indicates rate limiting
+        rate_limited = True
+        rate_limit_reset = int(response.headers.get("X-RateLimit-Reset", 0))
+        current_time = int(time.time())
+        wait_time = max(0, rate_limit_reset - current_time)
+        
+        logger.warning(f"Rate limited. Waiting {wait_time} seconds...")
+        await asyncio.sleep(wait_time)  # Wait for the rate limit reset time
+        rate_limited = False
+        return -1
+    else:
+        logger.error(f"Request failed with status code:{response.status_code}\n{response.text}")
+        return -2
 
 if __name__ == '__main__':
     logging.basicConfig(filename="./files/bob_logs",

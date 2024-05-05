@@ -56,11 +56,12 @@ Annoyingly @ your friend.
 - `hey.json` is setup as such:
 - {"users": [{"Name":[{"id": "discord_user_id_as_string" },{ "image": "link_to_image.gif" }]},{"Name2": [{"id": "discord_user_id_as_string" },{ "image": "link_to_image.png" }]},]}
 
-##### "Gamenight" [Temporarily Removed]
+##### "Monday Gamenight"
 
 Ask the group if they're coming to game night.
 
-- _This feature has been temporarily removed, and will be replaced by utilizing Discord's newer polls when the API is public for it._
+- Automatically creates a poll via HTTP API (because slash commands don't support it yet).
+- Poll is set for 48 hours default, and asks simply if anyone is coming to monday gamenight.
 
 ##### joel
 
