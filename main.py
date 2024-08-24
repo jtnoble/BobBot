@@ -297,7 +297,7 @@ async def generate_quote_html():
         json_file = json.load(jsf)
     additional_html = []
     for entry in json_file:
-        curr = f'<li>{entry['quote']} <i>Context: {entry['context']}</i> -{entry['author']}</li>'
+        curr = f"<li>{entry['quote']} <i>Context: {entry['context']}</i> -{entry['author']}</li>"
         additional_html.append(curr)
     
     quotes_html = '\n'.join(additional_html)
