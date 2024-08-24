@@ -253,6 +253,7 @@ async def delete_quote_function(ctx: SlashContext, quote_to_delete: str):
 @slash_command(name='quote_leaderboard', description="Leaderboard for quotes!")
 async def quote_leaderboard_function(ctx: SlashContext):
     df = pd.read_json('./files/quotes.json')
+    total_quotes = df.iloc[-1]['num']
     author_counts = df['author'].value_counts().reset_index()
     author_counts.columns = ['author', 'count']
     df = df.merge(author_counts, on='author')
@@ -276,7 +277,7 @@ async def quote_leaderboard_function(ctx: SlashContext):
 
     plt.savefig('./files/chart.png', format='png', bbox_inches='tight')
 
-    return await ctx.send(file='./files/chart.png')
+    return await ctx.send(content=f"Total Quotes: {total_quotes}", file='./files/chart.png')
 
 # HEADS OR TAILS: Click a button for heads or tails
 heads_tails_btn = Button(
