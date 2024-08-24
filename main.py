@@ -249,6 +249,14 @@ async def delete_quote_function(ctx: SlashContext, quote_to_delete: str):
             return await ctx.send(content="Quote deleted!", ephemeral=True)
     return await ctx.send(content="Quote not found!", ephemeral=True)
 
+
+# Button handler for quote count
+quote_count_send_quotes_btn = Button(
+    custom_id="view_quotes",
+    style=ButtonStyle.BLUE,
+    label="View Quotes!",
+    disabled=False
+)
 # QUOTE COUNT: Get the count of quotes!
 @slash_command(name='quote_leaderboard', description="Leaderboard for quotes!")
 async def quote_leaderboard_function(ctx: SlashContext):
@@ -275,9 +283,43 @@ async def quote_leaderboard_function(ctx: SlashContext):
     for index, value in enumerate(df['quotes']):
         plt.text(index, value, str(value), ha='center', va='bottom')
 
-    plt.savefig('./files/chart.png', format='png', bbox_inches='tight')
+    plt.savefig('./files/BobBotQuotesChart.png', format='png', bbox_inches='tight')
+    
+    return await ctx.send(content=f"Total Quotes: {total_quotes}", file='./files/BobBotQuotesChart.png', components=[quote_count_send_quotes_btn])
 
-    return await ctx.send(content=f"Total Quotes: {total_quotes}", file='./files/chart.png')
+@component_callback("view_quotes")
+async def quote_leaderboard_view_quotes_callback(ctx: ComponentContext):
+    await generate_quote_html()
+    return await ctx.send(content="Download and open this html file to view quotes!", file='./files/BobBotQuotes.html', ephemeral=True)
+
+async def generate_quote_html():
+    with open('./files/quotes.json', 'r', encoding='utf-8') as jsf:
+        json_file = json.load(jsf)
+    additional_html = []
+    for entry in json_file:
+        curr = f'<li>{entry['quote']} <i>Context: {entry['context']}</i> -{entry['author']}</li>'
+        additional_html.append(curr)
+    
+    quotes_html = '\n'.join(additional_html)
+
+    html_template = f'''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>BobBot Quotes!</title>
+    </head>
+    <body>
+        <h1>BobBot Quotes!</h1>
+        <ol>
+            {quotes_html}
+        </ol>
+    </body>
+    </html>
+    '''
+    with open('./files/BobBotQuotes.html', 'w', encoding='utf-8') as f:
+        f.write(html_template)
 
 # HEADS OR TAILS: Click a button for heads or tails
 heads_tails_btn = Button(
