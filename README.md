@@ -118,6 +118,42 @@ API Version 5.10: https://interactions-py.github.io/interactions.py/
 
 - Run locally on machine with `python3 main.py`
 
+##### Running w/ CronTab
+
+- Rename `main.py` to something else, like `bobbot.py`
+- Create a separate `checkrunning.sh`
+```
+#!/bin/bash
+
+# The name of your application or the command to start it
+APP_NAME="bobbot.py"
+APP_COMMAND="python3.11 bobbot.py"
+
+# Check if the application is running
+if ! pgrep -f "$APP_NAME" > /dev/null
+then
+    echo "Application is not running. Starting it now..."
+    $APP_COMMAND &
+else
+    echo "Application is running."
+fi
+```
+- Run the `checkrunning.sh` script from cron
+```
+crontab -e
+
+*/5 * * * * cd ~/path_to_main && ./checkrunning.sh
+```
+
+To restart the bot.
+- Sometimes you need one of two methods, kill or pkill
+- Firstly
+  - `ps aux | grep bobbot.py` to get the processes
+  - `kill pid` where pid is the process number, for example `bobbot 1043` would be `kill 1043`
+- Or
+  - `pkill -f bobbot.py`
+
+
 ### Credits
 
 - Jtnoble
