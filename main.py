@@ -1,4 +1,5 @@
 from interactions import *
+from interactions.api.events.discord import VoiceStateUpdate
 from dotenv import load_dotenv
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import matplotlib.pyplot as plt
@@ -7,9 +8,14 @@ import os, random, json, datetime, string, logging, requests, time, asyncio
 
 DEBUG = True
 
-bot = Client(intents=Intents.DEFAULT)
+intents = Intents.DEFAULT | Intents.GUILD_VOICE_STATES
+bot = Client(intents=intents)
+
+
 scheduler_running = False  # For if the program reconnects without restarting, no duplicate schedules.
 rate_limited = False # For if we're in a rate limit specifically with HTTP Requests
+voice_channel_timers = {} # tracking for notification in voice channel
+
 
 # ON READY, Print when ready
 @listen()
@@ -467,6 +473,63 @@ async def send_request_with_rate_limit(url, headers, data) -> int:
         logger.error(f"Request failed with status code:{response.status_code}\n{response.text}")
         return -2
 
+# Below is for voice channel join notifications.
+async def send_join_notification(member):
+    """Sends a notification when a user joins."""
+    embed = Embed(
+        title="Voice Chat Started!",
+        description=f"{member} has started a voice chat!",
+        timestamp=Timestamp.now(),
+        color=0x00FF00,  # Green color
+    )
+    await bot.get_channel(DEFAULT_VOICE_NOTIF_CHANNEL).send(embeds=embed)
+
+async def clear_channel_timer(channel_id):
+    """Clears the timer for a voice channel."""
+    if channel_id in voice_channel_timers:
+        del voice_channel_timers[channel_id]
+
+@listen(VoiceStateUpdate)
+async def on_voice_state_update(event: VoiceStateUpdate):
+    """
+    Listens for voice state updates and sends a notification when a user joins the target voice channel,
+    with a 5-minute buffer.
+    """
+    before: VoiceState = event.before
+    after: VoiceState = event.after
+
+    if after and str(after.channel.id) == DEFAULT_VOICE_CHANNEL:
+        if not before or not before.channel or str(before.channel.id) != DEFAULT_VOICE_CHANNEL:
+            # User joined the target channel
+            channel: GuildVoice = after.channel
+
+            if not before or (before.channel and len(before.channel.humans) == 0):
+                if len(channel.humans) == 1:
+                    # Channel was empty, and now has one user
+                    if after.channel.id in voice_channel_timers:
+                        voice_channel_timers[after.channel.id].cancel()
+                        await clear_channel_timer(after.channel.id)
+                    else:
+                        await send_join_notification(after.member)
+
+    elif before and str(before.channel.id) == DEFAULT_VOICE_CHANNEL:
+        if not after or str(after.channel.id) != DEFAULT_VOICE_CHANNEL:
+            # User left the target channel
+            channel: GuildVoice = before.channel
+
+            if len(channel.humans) == 1:
+                # len is 1, last user has just left
+                async def delayed_notification_check(channel_id):
+                    await asyncio.sleep(300)  # 5 minutes (300 seconds)
+                    await clear_channel_timer(channel_id)
+
+                # Start a timer
+                task = asyncio.create_task(delayed_notification_check(channel.id)) #pass the member that left.
+                voice_channel_timers[channel.id] = task
+            elif channel.id in voice_channel_timers: #if someone joined, cancel the timer.
+                voice_channel_timers[channel.id].cancel()
+                await clear_channel_timer(channel.id)
+
 if __name__ == '__main__':
     logging.basicConfig(filename="./files/bob_logs",
                     filemode='a',
@@ -475,4 +538,6 @@ if __name__ == '__main__':
                     level=logging.INFO)
     logger = logging.getLogger('BobBot')
     load_dotenv()
+    DEFAULT_VOICE_CHANNEL = os.getenv("DEFAULT_VOICE_CHANNEL")
+    DEFAULT_VOICE_NOTIF_CHANNEL = os.getenv("DEFAULT_VOICE_NOTIF_CHANNEL")
     bot.start(os.getenv("DISCORD_TOKEN"))
