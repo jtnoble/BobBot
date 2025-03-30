@@ -14,7 +14,7 @@ bot = Client(intents=intents)
 
 scheduler_running = False  # For if the program reconnects without restarting, no duplicate schedules.
 rate_limited = False # For if we're in a rate limit specifically with HTTP Requests
-voice_channel_timers = {} # tracking for notification in voice channel
+voice_channel_timers = {}  # Keeps track of timers
 
 
 # ON READY, Print when ready
@@ -484,11 +484,6 @@ async def send_join_notification(member):
     )
     await bot.get_channel(DEFAULT_VOICE_NOTIF_CHANNEL).send(embeds=embed)
 
-async def clear_channel_timer(channel_id):
-    """Clears the timer for a voice channel."""
-    if channel_id in voice_channel_timers:
-        del voice_channel_timers[channel_id]
-
 @listen(VoiceStateUpdate)
 async def on_voice_state_update(event: VoiceStateUpdate):
     """
@@ -499,36 +494,22 @@ async def on_voice_state_update(event: VoiceStateUpdate):
     after: VoiceState = event.after
 
     if after and str(after.channel.id) == DEFAULT_VOICE_CHANNEL:
-        if not before or not before.channel or str(before.channel.id) != DEFAULT_VOICE_CHANNEL:
-            # User joined the target channel
-            channel: GuildVoice = after.channel
+        if not before or (before.channel and len(before.channel.voice_members) == 0):
+            if len(after.channel.voice_members) == 1:
+                # Channel was empty and now has one user
+                last_vc_time = voice_channel_timers.get(after.channel.id)
+                if last_vc_time:
+                    now = datetime.datetime.now()
+                    diff = now - last_vc_time
+                    if diff.seconds > 300: await send_join_notification(after.member) # 5 minutes
+                else: await send_join_notification(after.member) # Should always alert if VC never existed, new VC entry
+                voice_channel_timers[after.channel.id] = datetime.datetime.now() # Always update time in dict
 
-            if not before or (before.channel and len(before.channel.humans) == 0):
-                if len(channel.humans) == 1:
-                    # Channel was empty, and now has one user
-                    if after.channel.id in voice_channel_timers:
-                        voice_channel_timers[after.channel.id].cancel()
-                        await clear_channel_timer(after.channel.id)
-                    else:
-                        await send_join_notification(after.member)
+    # Reset timer when all users have left
+    if before and str(before.channel.id) == DEFAULT_VOICE_CHANNEL:
+        if len(before.channel.voice_members) == 1:
+            if voice_channel_timers.get(before.channel.id): voice_channel_timers[before.channel.id] = datetime.datetime.now()
 
-    elif before and str(before.channel.id) == DEFAULT_VOICE_CHANNEL:
-        if not after or str(after.channel.id) != DEFAULT_VOICE_CHANNEL:
-            # User left the target channel
-            channel: GuildVoice = before.channel
-
-            if len(channel.humans) == 1:
-                # len is 1, last user has just left
-                async def delayed_notification_check(channel_id):
-                    await asyncio.sleep(300)  # 5 minutes (300 seconds)
-                    await clear_channel_timer(channel_id)
-
-                # Start a timer
-                task = asyncio.create_task(delayed_notification_check(channel.id)) #pass the member that left.
-                voice_channel_timers[channel.id] = task
-            elif channel.id in voice_channel_timers: #if someone joined, cancel the timer.
-                voice_channel_timers[channel.id].cancel()
-                await clear_channel_timer(channel.id)
 
 if __name__ == '__main__':
     logging.basicConfig(filename="./files/bob_logs",
