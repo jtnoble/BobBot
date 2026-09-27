@@ -116,7 +116,10 @@ API Version 5.10: https://interactions-py.github.io/interactions.py/
 
 ### Running
 
-- Run locally on machine with `python3 main.py`
+- Run locally on machine with `python3 bobbot.py`
+
+#### Using checkrunning.sh
+This file is specifically here if you know how to setup cronjobs. Use cron to have this file check for if your bot is running, and if it is not, starting it.
 
 ### Credits
 
