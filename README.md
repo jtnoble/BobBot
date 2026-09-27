@@ -10,6 +10,16 @@ It all starts with the /birthdays command. We have two friends in our friend gro
 
 This uses a mixture of auto-scheduling and slash commands to create a fun experience for your server
 
+### Extensions
+
+Extensions were a pretty late addition to the project, but an important one. The regular bot file was getting a little too lengthy, so I partitioned out the commands into separated types of tasks. They are currently as follows:
+
+- Fun: Fun little gimmicks. Things like Joel, the spinning fish, or annoying your friends with an @ coming straight from the bot.
+- Gamenight: Mostly pertains to my (the creator) group of friends, but can be removed or reused for your own reasons.
+- Quotes: The bulk of anything to do with quotes (except scheduling). Adding, removing, etc.
+- Scheduled Tasks: All scheduled tasks (not really an extension, but exists here because it makes more sense than another folder just for it).
+- Voice Notify: Notifications for joining voice channels.
+
 #### Slash Commands
 
 List of slash commands usable
@@ -94,7 +104,7 @@ Backup your quotes data!
 
 ### Discord Interactions API
 
-API Version 5.10: https://interactions-py.github.io/interactions.py/
+API Version 5.16: https://interactions-py.github.io/interactions.py/
 
 ### Installation
 
