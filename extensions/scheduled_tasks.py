@@ -1,5 +1,6 @@
 import os, json, datetime, logging
 from extensions.quotes import get_random_quote
+from extensions.quote_feedback import send_ratable_quote
 
 logger = logging.getLogger('BobBot')
 
@@ -13,10 +14,10 @@ async def morning_quote(bot):
     author = item['author']
     context = item['context']
     if context:
-        response = f'Time for the quote of the day: \n{num}: "{quote}" -{author}\n*[Context: {context}]*'
+        base_content = f'Time for the quote of the day: \n{num}: "{quote}" -{author}\n*[Context: {context}]*'
     else:
-        response = f'Time for the quote of the day: \n{num}: "{quote}" -{author}'
-    await bot.get_channel(channel_id).send(response)
+        base_content = f'Time for the quote of the day: \n{num}: "{quote}" -{author}'
+    await send_ratable_quote(bot.get_channel(channel_id), base_content, bot, num)
 
 
 # BACKUP QUOTE: Backup quotes every morning

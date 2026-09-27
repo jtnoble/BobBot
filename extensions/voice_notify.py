@@ -4,6 +4,7 @@ import datetime
 
 # Below is for voice channel join notifications.
 
+
 class VoiceNotify(Extension):
 
     async def send_join_notification(self, member):

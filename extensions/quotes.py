@@ -1,6 +1,7 @@
 from interactions import Extension, slash_command, slash_option, OptionType, SlashContext
 from interactions import Button, ButtonStyle, ComponentContext, component_callback
 from interactions import Modal, ShortText, ParagraphText, ModalContext
+from extensions.quote_feedback import send_ratable_quote
 import matplotlib.pyplot as plt
 import pandas as pd
 import json, string, random, logging
@@ -67,7 +68,8 @@ def add_quote_function(quote: str, author: str, context: str = None):
         "num": len(json_obj)+1,
         "quote": quote,
         "author": author.title(),
-        "context": context if context else ""
+        "context": context if context else "",
+        "ratings": {}
     }
     json_obj.append(new_quote)
     with open('./files/quotes.json', 'w') as f_write:
@@ -145,11 +147,11 @@ class Quotes(Extension):
             context = item['context']
 
             if context:
-                response = f'{num}: "{quote}" -{author}\n*[Context: {context}]*'
+                base_content = f'{num}: "{quote}" -{author}\n*[Context: {context}]*'
             else:
-                response = f'{num}: "{quote}" -{author}'
+                base_content = f'{num}: "{quote}" -{author}'
             logger.info(f'{ctx.author} asked for quote {num}')
-            return await ctx.send(content=response)
+            return await send_ratable_quote(ctx, base_content, self.bot, num)
         return await ctx.send(content="No quote found!")
 
     # ADD QUOTE: Add a quote to the quote text file

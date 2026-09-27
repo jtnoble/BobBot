@@ -17,6 +17,7 @@ Extensions were a pretty late addition to the project, but an important one. The
 - Fun: Fun little gimmicks. Things like Joel, the spinning fish, or annoying your friends with an @ coming straight from the bot.
 - Gamenight: Mostly pertains to my (the creator) group of friends, but can be removed or reused for your own reasons.
 - Quotes: The bulk of anything to do with quotes (except scheduling). Adding, removing, etc.
+- Quote Feedback: Shared between Quotes and Scheduled tasks, so thought it better to give it its own extension
 - Scheduled Tasks: All scheduled tasks (not really an extension, but exists here because it makes more sense than another folder just for it).
 - Voice Notify: Notifications for joining voice channels.
 

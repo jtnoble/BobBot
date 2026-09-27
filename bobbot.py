@@ -22,6 +22,7 @@ bot.scheduler_running = False   # For if the program reconnects without restarti
 bot.rate_limited = False        # For if we're in a rate limit specifically with HTTP Requests
 bot.voice_channel_timers = {}   # Keeps track of timers
 bot.active_voice_channels = {}  # Keeps track of voice channel activity
+bot.quote_ratings = {}          # {message_id: {"base_content": str, "votes": {user_id: int}}}
 bot.DEFAULT_VOICE_CHANNEL = os.getenv("DEFAULT_VOICE_CHANNEL")
 bot.DEFAULT_VOICE_NOTIF_CHANNEL = os.getenv("DEFAULT_VOICE_NOTIF_CHANNEL")
 
@@ -29,6 +30,7 @@ bot.DEFAULT_VOICE_NOTIF_CHANNEL = os.getenv("DEFAULT_VOICE_NOTIF_CHANNEL")
 from extensions.scheduled_tasks import morning_quote, backup_quotes, check_birthday
 
 bot.load_extension("extensions.quotes")
+bot.load_extension("extensions.quote_feedback")
 bot.load_extension("extensions.fun")
 bot.load_extension("extensions.gamenight")
 bot.load_extension("extensions.voice_notify")
